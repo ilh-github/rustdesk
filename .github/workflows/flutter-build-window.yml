@@ -1,0 +1,562 @@
+name: Build the flutter version of the RustDesk
+
+on:
+  workflow_call:
+    inputs:
+      upload-artifact:
+        type: boolean
+        default: true
+      upload-tag:
+        type: string
+        default: "nightly"
+
+env:
+  RUST_VERSION: "1.75" # https://github.com/rustdesk/rustdesk/discussions/7503
+  CARGO_NDK_VERSION: "3.1.2"
+  LLVM_VERSION: "15.0.6"
+  FLUTTER_VERSION: "3.19.5"
+  FLUTTER_RUST_BRIDGE_VERSION: "1.80.1"
+  # for arm64 linux because official Dart SDK does not work
+  FLUTTER_ELINUX_VERSION: "3.16.9"
+  FLUTTER_ELINUX_COMMIT_ID: "c02bd16e1630f5bd690b85c5c2456ac1920e25af"
+  TAG_NAME: "${{ inputs.upload-tag }}"
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+  # vcpkg version: 2023.10.19
+  # for multiarch gcc compatibility
+  VCPKG_COMMIT_ID: "8eb57355a4ffb410a2e94c07b4dca2dffbee8e50"
+  VERSION: "1.2.4"
+  NDK_VERSION: "r26b"
+  #signing keys env variable checks
+  ANDROID_SIGNING_KEY: "${{ secrets.ANDROID_SIGNING_KEY }}"
+  MACOS_P12_BASE64: "${{ secrets.MACOS_P12_BASE64 }}"
+  # To make a custom build with your own servers set the below secret values
+  RS_PUB_KEY: "${{ secrets.RS_PUB_KEY }}"
+  RENDEZVOUS_SERVER: "${{ secrets.RENDEZVOUS_SERVER }}"
+  API_SERVER: "${{ secrets.API_SERVER }}"
+  UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
+  SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}"
+
+jobs:
+  build-RustDeskTempTopMostWindow:
+    uses: ./.github/workflows/third-party-RustDeskTempTopMostWindow.yml
+    with:
+      upload-artifact: ${{ inputs.upload-artifact }}
+      target: windows-2019
+      configuration: Release
+      platform: x64
+      target_version: Windows10
+    strategy:
+      fail-fast: false
+
+  build-for-windows-flutter:
+    name: ${{ matrix.job.target }} (${{ matrix.job.os }})
+    needs: [build-RustDeskTempTopMostWindow]
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          # - { target: i686-pc-windows-msvc        , os: windows-2019                  }
+          # - { target: x86_64-pc-windows-gnu       , os: windows-2019                  }
+          - { target: x86_64-pc-windows-msvc, os: windows-2019, arch: x86_64 }
+          # - { target: aarch64-pc-windows-msvc, os: windows-2019, arch: aarch64 }
+    steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: ${{ env.LLVM_VERSION }}
+
+      - name: Install flutter
+        uses: subosito/flutter-action@v2.12.0 #https://github.com/subosito/flutter-action/issues/277
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.job.target }}
+          components: "rustfmt"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ matrix.job.os }}
+
+      - name: Install flutter rust bridge deps
+        run: |
+          git config --global core.longpaths true
+          cargo install flutter_rust_bridge_codegen --version ${{ env.FLUTTER_RUST_BRIDGE_VERSION }} --features "uuid"
+          Push-Location flutter ; flutter pub get ; Pop-Location
+          ~/.cargo/bin/flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart
+
+      - name: Setup vcpkg with Github Actions binary cache
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: C:\vcpkg
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+
+      - name: Install vcpkg dependencies
+        run: |
+          $VCPKG_ROOT/vcpkg install --triplet x64-windows-static --x-install-root="$VCPKG_ROOT/installed"
+        shell: bash
+
+      - name: Build rustdesk
+        run: python3 .\build.py --portable --hwcodec --flutter --gpucodec --skip-portable-pack
+
+      - name: find Runner.res
+        # Windows: find Runner.res (compiled from ./flutter/windows/runner/Runner.rc), copy to ./Runner.res
+        # Runner.rc does not contain actual version, but Runner.res does
+        continue-on-error: true
+        shell: bash
+        run: |
+          runner_res=$(find . -name "Runner.res");
+          if [ "$runner_res" == "" ]; then
+            echo "Runner.res: not found";
+          else
+            echo "Runner.res: $runner_res";
+            cp $runner_res ./libs/portable/Runner.res;
+            echo "list ./libs/portable/Runner.res";
+            ls -l ./libs/portable/Runner.res;
+          fi
+
+      - name: Download RustDeskTempTopMostWindow artifacts
+        uses: actions/download-artifact@master
+        if: ${{ inputs.upload-artifact }}
+        with:
+          name: topmostwindow-artifacts
+          path: "./flutter/build/windows/x64/runner/Release/"
+
+      - name: Compress unsigned
+        shell: bash
+        run: |
+          mv ./flutter/build/windows/x64/runner/Release ./rustdesk
+          tar czf rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-unsigned.tar.gz rustdesk
+
+      - name: Sign rustdesk files
+        if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != ''
+        shell: bash
+        run: |
+          pip3 install requests argparse
+          BASE_URL=${{ secrets.SIGN_BASE_URL }} SECRET_KEY=${{ secrets.SIGN_SECRET_KEY }} python3 res/job.py sign_files ./rustdesk/
+
+      - name: Build self-extracted executable
+        shell: bash
+        if: env.UPLOAD_ARTIFACT == 'true'
+        run: |
+          pushd ./libs/portable
+          pip3 install -r requirements.txt
+          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+          popd
+          mkdir -p ./SignOutput
+          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
+
+      - name: Sign rustdesk self-extracted file
+        if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != ''
+        shell: bash
+        run: |
+          BASE_URL=${{ secrets.SIGN_BASE_URL }} SECRET_KEY=${{ secrets.SIGN_SECRET_KEY }} python3 res/job.py sign_files ./SignOutput
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        if: env.UPLOAD_ARTIFACT == 'true'
+        with:
+          prerelease: true
+          tag_name: ${{ env.TAG_NAME }}
+          files: |
+            ./SignOutput/rustdesk-*.exe
+            ./rustdesk-*.tar.gz
+
+  # The fallback for the flutter version, we use Sciter for 32bit Windows.
+  build-for-windows-sciter:
+    name: ${{ matrix.job.target }} (${{ matrix.job.os }})
+    runs-on: ${{ matrix.job.os }}
+    # Temporarily disable this action due to additional test is needed.
+    # if: false
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          # - { target: i686-pc-windows-msvc        , os: windows-2019                  }
+          # - { target: x86_64-pc-windows-gnu       , os: windows-2019                  }
+          - { target: i686-pc-windows-msvc, os: windows-2019, arch: x86 }
+          # - { target: aarch64-pc-windows-msvc, os: windows-2019 }
+    steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: Install LLVM and Clang
+        uses: rustdesk-org/install-llvm-action-32bit@master
+        with:
+          version: ${{ env.LLVM_VERSION }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: nightly-2023-10-13-${{ matrix.job.target }} # must use nightly here, because of abi_thiscall feature required
+          targets: ${{ matrix.job.target }}
+          components: "rustfmt"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ matrix.job.os }}-sciter
+
+      - name: Setup vcpkg with Github Actions binary cache
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: C:\vcpkg
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+
+      - name: Install vcpkg dependencies
+        run: |
+          $VCPKG_ROOT/vcpkg install --triplet x86-windows-static --x-install-root="$VCPKG_ROOT/installed"
+        shell: bash
+
+      - name: Build rustdesk
+        id: build
+        shell: bash
+        run: |
+          python3 res/inline-sciter.py
+          # Patch sciter x86
+          sed -i 's/branch = "dyn"/branch = "dyn_x86"/g' ./Cargo.toml
+          cargo build --features inline,gpucodec --release --bins
+          mkdir -p ./Release
+          mv ./target/release/rustdesk.exe ./Release/rustdesk.exe
+          curl -LJ -o ./Release/sciter.dll https://github.com/c-smile/sciter-sdk/raw/master/bin.win/x32/sciter.dll
+          echo "output_folder=./Release" >> $GITHUB_OUTPUT
+
+      - name: find Runner.res
+        # Windows: find Runner.res (compiled from ./flutter/windows/runner/Runner.rc), copy to ./Runner.res
+        # Runner.rc does not contain actual version, but Runner.res does
+        continue-on-error: true
+        shell: bash
+        run: |
+          runner_res=$(find . -name "Runner.res");
+          if [ "$runner_res" == "" ]; then
+            echo "Runner.res: not found";
+          else
+            echo "Runner.res: $runner_res";
+            cp $runner_res ./libs/portable/Runner.res;
+            echo "list ./libs/portable/Runner.res";
+            ls -l ./libs/portable/Runner.res;
+          fi
+
+      - name: Sign rustdesk files
+        if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != ''
+        shell: bash
+        run: |
+          pip3 install requests argparse
+          BASE_URL=${{ secrets.SIGN_BASE_URL }} SECRET_KEY=${{ secrets.SIGN_SECRET_KEY }} python3 res/job.py sign_files ./Release/
+
+      - name: Build self-extracted executable
+        shell: bash
+        run: |
+          pushd ./libs/portable
+          pip3 install -r requirements.txt
+          python3 ./generate.py -f ../../Release/ -o . -e ../../Release/rustdesk.exe
+          popd
+          mkdir -p ./SignOutput
+          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.exe
+          mv ./Release ./rustdesk
+          tar czf rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.tar.gz rustdesk
+
+      - name: Sign rustdesk self-extracted file
+        if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != ''
+        shell: bash
+        run: |
+          BASE_URL=${{ secrets.SIGN_BASE_URL }} SECRET_KEY=${{ secrets.SIGN_SECRET_KEY }} python3 res/job.py sign_files ./SignOutput/
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        if: env.UPLOAD_ARTIFACT == 'true'
+        with:
+          prerelease: true
+          tag_name: ${{ env.TAG_NAME }}
+          files: |
+            ./SignOutput/rustdesk-*.exe
+            ./rustdesk-*.tar.gz
+
+  build-rustdesk-sciter-arm:
+    if: ${{ inputs.upload-artifact }}
+    name: build-rustdesk(sciter) ${{ matrix.job.target }} (${{ matrix.job.os }}) [${{ matrix.job.extra-build-features }}]
+    runs-on: [self-hosted, Linux, ARM64]
+    strategy:
+      fail-fast: false
+      matrix:
+        # use a high level qemu-user-static
+        job:
+          - {
+              arch: armv7,
+              target: armv7-unknown-linux-gnueabihf,
+              deb-arch: armhf,
+              os: ubuntu-latest,
+              use-cross: true,
+              extra-build-features: "",
+              enable-headless: true,
+            }
+          # - { arch: armv7, target: armv7-unknown-linux-gnueabihf , os: ubuntu-20.04, use-cross: true, extra-build-features: "appimage" }
+          # - { target: arm-unknown-linux-musleabihf, os: ubuntu-20.04, use-cross: true }
+    steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+               cmake \
+               crossbuild-essential-armhf \
+               curl \
+               g++ \
+               gcc \
+               git \
+               nasm \
+               ninja-build \
+               pkg-config \
+               unzip \
+               xz-utils \
+               zip
+
+      #- name: Maximize build space
+      #  run: |
+      #    sudo rm -rf /opt/ghc
+      #    sudo rm -rf /usr/local/lib/android
+      #    sudo rm -rf /usr/share/dotnet
+      #    sudo apt-get update -y
+      #    sudo apt-get install qemu-user-static -y
+
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      #- name: Set Swap Space
+      #  uses: pierotofy/set-swap-space@master
+      #  with:
+      #    swap-size-gb: 12
+
+      - name: Free Space
+        run: |
+          df -h
+          free -m
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.job.target }}
+          components: "rustfmt"
+
+      - name: Save Rust toolchain version
+        run: |
+          RUST_TOOLCHAIN_VERSION=$(cargo --version | awk '{print $2}')
+          echo "RUST_TOOLCHAIN_VERSION=$RUST_TOOLCHAIN_VERSION" >> $GITHUB_ENV
+
+      - name: Setup vcpkg with Github Actions binary cache
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: /opt/artifacts/vcpkg
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+
+      - name: Install vcpkg dependencies
+        run: |
+          cp $PWD/res/vcpkg/linux.cmake $VCPKG_ROOT/scripts/toolchains/linux.cmake
+          $VCPKG_ROOT/vcpkg install --triplet arm-linux --x-install-root="$VCPKG_ROOT/installed"
+        shell: bash
+
+      - uses: rustdesk-org/run-on-arch-action@amd64-support
+        name: Build rustdesk sciter binary for ${{ matrix.job.arch }}
+        id: vcpkg
+        with:
+          arch: ${{ matrix.job.arch }}
+          distro: ubuntu18.04-rustdesk
+          githubToken: ${{ github.token }}
+          setup: |
+            ls -l "${PWD}"
+          dockerRunArgs: |
+            --volume "${PWD}:/workspace"
+            --volume "/opt/artifacts:/opt/artifacts"
+          shell: /bin/bash
+          install: |
+            apt-get update -y
+            apt-get install -y \
+               build-essential \
+               clang \
+               cmake \
+               curl \
+               gcc \
+               git \
+               g++ \
+               libappindicator3-dev \
+               libasound2-dev \
+               libclang-dev \
+               libdbus-1-dev \
+               libglib2.0-dev \
+               libgstreamer1.0-dev \
+               libgstreamer-plugins-base1.0-dev \
+               libgtk-3-dev \
+               liblzma-dev \
+               libpam0g-dev \
+               libpulse-dev \
+               libva-dev \
+               libvdpau-dev \
+               libxcb-randr0-dev \
+               libxcb-shape0-dev \
+               libxcb-xfixes0-dev \
+               libxdo-dev \
+               libxfixes-dev \
+               nasm \
+               ninja-build \
+               pkg-config \
+               python3 \
+               rpm \
+               unzip \
+               wget \
+               xz-utils
+          run: |
+            # disable git safe.directory
+            git config --global --add safe.directory "*"
+            # rust
+            pushd /opt
+            # do not use rustup, because memory overflow in qemu
+            wget -O rust.tar.gz https://static.rust-lang.org/dist/rust-${{env.RUST_TOOLCHAIN_VERSION}}-${{ matrix.job.target }}.tar.gz
+            tar -zxvf rust.tar.gz > /dev/null && rm rust.tar.gz
+            cd rust-${{env.RUST_TOOLCHAIN_VERSION}}-${{ matrix.job.target }} && ./install.sh
+            rm -rf rust-${{env.RUST_TOOLCHAIN_VERSION}}-${{ matrix.job.target }}
+            # edit config
+            mkdir -p ~/.cargo/
+            echo """
+              [source.crates-io]
+              registry = 'https://github.com/rust-lang/crates.io-index'
+            """ > ~/.cargo/config
+            cat ~/.cargo/config
+
+            # build
+            pushd /workspace
+            python3 ./res/inline-sciter.py
+            export VCPKG_ROOT=/opt/artifacts/vcpkg
+            export ARCH=armhf
+            export DEFAULT_FEAT=""
+            export CARGO_INCREMENTAL=0
+            if ${{ matrix.job.enable-headless }}; then
+              export DEFAULT_FEAT=linux_headless
+            fi
+            cargo build --features inline,${{ matrix.job.extra-build-features }},$DEFAULT_FEAT --release --bins
+            # package
+            mkdir -p ./Release
+            mv ./target/release/rustdesk ./Release/rustdesk
+            wget -O ./Release/libsciter-gtk.so https://github.com/c-smile/sciter-sdk/raw/master/bin.lnx/arm32/libsciter-gtk.so
+            ./build.py --package ./Release
+
+      - name: Rename rustdesk
+        shell: bash
+        run: |
+          for name in rustdesk*??.deb; do
+              # use cp to duplicate deb files to fit other packages.
+              cp "$name" "${name%%.deb}-${{ matrix.job.arch }}-sciter.deb"
+          done
+
+      - name: Publish debian package
+        if: matrix.job.extra-build-features == '' && env.UPLOAD_ARTIFACT == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          tag_name: ${{ env.TAG_NAME }}
+          files: |
+            rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.deb
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@master
+        if: ${{ contains(matrix.job.extra-build-features, 'flatpak') }}
+        with:
+          name: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.deb
+          path: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.deb
+
+
+
+
+  build-rustdesk-web:
+    name: build-rustdesk-web
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - { arch: x86_64, target: x86_64-unknown-linux-gnu, os: ubuntu-18.04 }
+    env:
+      RELEASE_NAME: web-basic
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: Prepare env
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y wget npm
+
+      - name: Install flutter
+        uses: subosito/flutter-action@v2.12.0 #https://github.com/subosito/flutter-action/issues/277
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      # https://rustdesk.com/docs/en/dev/build/web/
+      - name: Build web
+        shell: bash
+        run: |
+          pushd flutter/web/js
+          npm install yarn -g
+          npm install typescript -g
+          npm install protoc -g
+          # Install protoc first, see: https://google.github.io/proto-lens/installing-protoc.html
+          npm install ts-proto
+          # Only works with vite <= 2.8, see: https://github.com/vitejs/vite/blob/main/docs/guide/build.md#chunking-strategy
+          npm install vite@2.8
+          yarn install && yarn build
+          popd
+
+          pushd flutter/web
+          wget https://github.com/rustdesk/doc.rustdesk.com/releases/download/console/web_deps.tar.gz
+          tar xzf web_deps.tar.gz
+          popd
+
+          pushd flutter
+          flutter build web --release
+          cd build
+          cp ../web/README.md web
+          # TODO: Remove the following line when the web is almost complete.
+          echo -e "\n\nThis build is for preview and not full functionality." >> web/README.md
+          dir_name="rustdesk-${{ env.VERSION }}-${{ env.RELEASE_NAME }}"
+          mv web "${dir_name}" && tar czf "${dir_name}".tar.gz "${dir_name}"
+          sha256sum "${dir_name}".tar.gz
+          popd
+
+      - name: Publish web
+        if: env.UPLOAD_ARTIFACT == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          tag_name: ${{ env.TAG_NAME }}
+          files: |
+            flutter/build/rustdesk-${{ env.VERSION }}-${{ env.RELEASE_NAME }}.tar.gz
