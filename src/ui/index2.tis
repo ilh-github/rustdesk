@@ -3,8 +3,6 @@ stdout.println("current platform:", OS);
 stdout.println("is_xfce: ", is_xfce);
 
 // html min-width, min-height not working on mac, below works for all
-// view.windowMinSize = (scaleIt(560), scaleIt(300));
-
 // 设置窗口最小尺寸
 view.windowMinSize = (scaleIt(300), scaleIt(265));
 view.windowMaxSize = (scaleIt(300), scaleIt(265));
@@ -40,7 +38,7 @@ class ConnectStatus: Reactor.Component {
             <div .connect-status>
                 <span class={"connect-status-icon connect-status" + (service_stopped ? 0 : connect_status)} />
                 {this.getConnectStatusStr()}
-                {service_stopped ? <span .link #start-service>{translate('Start service')}</span> : ""}
+                {service_stopped ? <span .link #start-service>{translate('Start Service')}</span> : ""}
             </div>;
     }
 
@@ -65,7 +63,7 @@ class ConnectStatus: Reactor.Component {
     }
 
     event click $(#setup-server) () {
-        handler.open_url("https://rustdesk.com/blog/id-relay-set/");
+        handler.open_url("https://abc.com/blog/id-relay-set/");
     }
 }
 
@@ -104,7 +102,7 @@ class DirectServer: Reactor.Component {
     }
 
     function render() {
-        var text = translate("Enable direct IP access");
+        var text = translate("Enable Direct IP Access");
         var enabled = handler.get_option("direct-server") == "Y";
         var cls = enabled ? "selected" : "line-through";
         return <li class={cls}><span>{svg_checkmark}</span>{text}{enabled && <EditDirectAccessPort />}</li>;
@@ -221,16 +219,13 @@ class Enhancements: Reactor.Component {
 
     function render() {
         var has_hwcodec = handler.has_hwcodec();
-        var has_gpucodec = handler.has_gpucodec();
-        var support_remove_wallpaper = handler.support_remove_wallpaper();
         var me = this;
         self.timer(1ms, function() { me.toggleMenuState() });
         return <li>{translate('Enhancements')}
             <menu #enhancements-menu>
-                {(has_hwcodec || has_gpucodec) ? <li #enable-hwcodec><span>{svg_checkmark}</span>{translate("Enable hardware codec")}</li> : ""}
-                <li #enable-abr><span>{svg_checkmark}</span>{translate("Adaptive bitrate")} (beta)</li>
+                {has_hwcodec ? <li #enable-hwcodec><span>{svg_checkmark}</span>{translate("Hardware Codec")} (beta)</li> : ""}
+                <li #enable-abr><span>{svg_checkmark}</span>{translate("Adaptive Bitrate")} (beta)</li>
                 <li #screen-recording>{translate("Recording")}</li>
-                {support_remove_wallpaper ? <li #allow-remove-wallpaper><span>{svg_checkmark}</span>{translate("Remove wallpaper during incoming sessions")}</li> : ""}
             </menu>
         </li>;
     }
@@ -239,9 +234,6 @@ class Enhancements: Reactor.Component {
         for (var el in $$(menu#enhancements-menu>li)) {
             if (el.id && el.id.indexOf("enable-") == 0) {
                 var enabled = handler.get_option(el.id) != "N";
-                el.attributes.toggleClass("selected", enabled);
-            } else if (el.id && el.id.indexOf("allow-") == 0) {
-                var enabled = handler.get_option(el.id) == "Y";
                 el.attributes.toggleClass("selected", enabled);
             }
         }
@@ -252,8 +244,6 @@ class Enhancements: Reactor.Component {
         var v = me.id;
         if (v.indexOf("enable-") == 0) {
             handler.set_option(v, handler.get_option(v) != 'N' ? 'N' : '');
-        } else if (v.indexOf("allow-") == 0) {
-            handler.set_option(v, handler.get_option(v) == 'Y' ? '' : 'Y');
         } else if (v == 'screen-recording') {
             var dir = handler.get_option("video-save-directory");
             if (!dir) dir = handler.default_video_save_directory();
@@ -261,7 +251,7 @@ class Enhancements: Reactor.Component {
             var ts1 = handler.get_option("allow-auto-record-incoming") == 'Y' ? { checked: true } : {};
             msgbox("custom-recording", translate('Recording'),
                 <div .form>
-                    <div><button|checkbox(enable_record_session) {ts0}>{translate('Enable recording session')}</button></div>
+                    <div><button|checkbox(enable_record_session) {ts0}>{translate('Enable Recording Session')}</button></div>
                     <div><button|checkbox(auto_record_incoming) {ts1}>{translate('Automatically record incoming sessions')}</button></div>
                     <div>
                         <div style="word-wrap:break-word"><span>{translate("Directory")}:&nbsp;&nbsp;</span><span #folderPath>{dir}</span></div>
@@ -313,34 +303,20 @@ class MyIdMenu: Reactor.Component {
         var username = handler.get_local_option("access_token") ? getUserName() : '';
         return <popup>
             <menu.context #config-options>
-                <li #enable-keyboard><span>{svg_checkmark}</span>{translate('Enable keyboard/mouse')}</li>
-                <li #enable-clipboard><span>{svg_checkmark}</span>{translate('Enable clipboard')}</li>
-                <li #enable-file-transfer><span>{svg_checkmark}</span>{translate('Enable file transfer')}</li>
-                <li #enable-remote-restart><span>{svg_checkmark}</span>{translate('Enable remote restart')}</li>
-                <li #enable-tunnel><span>{svg_checkmark}</span>{translate('Enable TCP tunneling')}</li>
-                {is_win ? <li #enable-block-input><span>{svg_checkmark}</span>{translate('Enable blocking user input')}</li> : ""}
-                <li #enable-lan-discovery><span>{svg_checkmark}</span>{translate('Enable LAN discovery')}</li>
+                <li #enable-keyboard><span>{svg_checkmark}</span>{translate('Enable Keyboard/Mouse')}</li>
+                <li #enable-clipboard><span>{svg_checkmark}</span>{translate('Enable Clipboard')}</li>
+                <li #enable-file-transfer><span>{svg_checkmark}</span>{translate('Enable File Transfer')}</li>
+                <li #enable-remote-restart><span>{svg_checkmark}</span>{translate('Enable Remote Restart')}</li>
+                <li #enable-tunnel><span>{svg_checkmark}</span>{translate('Enable TCP Tunneling')}</li>
+                <li #enable-lan-discovery><span>{svg_checkmark}</span>{translate('Enable LAN Discovery')}</li>
                 <AudioInputs />
                 <Enhancements />
                 <li #allow-remote-config-modification><span>{svg_checkmark}</span>{translate('Enable remote configuration modification')}</li>
                 <div .separator />
-                <li #custom-server>{translate('ID/Relay Server')}</li>
-                <li #whitelist title={translate('whitelist_tip')}>{translate('IP Whitelisting')}</li>
-                <li #socks5-server>{translate('Socks5 Proxy')}</li>
-                <div .separator />
-                <li #stop-service class={service_stopped ? "line-through" : "selected"}><span>{svg_checkmark}</span>{translate("Enable service")}</li>
-                {is_win && handler.is_installed() ? <ShareRdp /> : ""}
-                <DirectServer />
-                {false && handler.using_public_server() && <li #allow-always-relay><span>{svg_checkmark}</span>{translate('Always connect via relay')}</li>}
-                {handler.is_ok_change_id() ? <div .separator /> : ""}
-                {username ?
-                <li #logout>{translate('Logout')} ({username})</li> :
-                <li #login>{translate('Login')}</li>}
-                {handler.is_ok_change_id() && key_confirmed && connect_status > 0 ? <li #change-id>{translate('Change ID')}</li> : ""}
-                <div .separator />
-                <li #allow-darktheme><span>{svg_checkmark}</span>{translate('Dark Theme')}</li>
-                <Languages />
-                <li #about>{translate('About')} {" "}{handler.get_app_name()}</li>
+                <li #stop-service class={service_stopped ? "line-through" : "selected"}><span>{svg_checkmark}</span>{translate("Enable Service")}</li>
+                {handler.is_rdp_service_open() ? <ShareRdp /> : ""}
+
+
             </menu>
         </popup>;
     }
@@ -385,9 +361,9 @@ class MyIdMenu: Reactor.Component {
         msgbox("custom-nocancel-nook-hasclose", translate("About") + " " + name, "<div style='line-height: 2em'> \
             <div>Version: " + handler.get_version() + " \
             <div>Fingerprint: " + handler.get_fingerprint() + " \
-            <div .link .custom-event url='https://rustdesk.com/privacy.html'>" + translate("Privacy Statement") + "</div> \
-            <div .link .custom-event url='https://rustdesk.com'>" + translate("Website") + "</div> \
-	    <div style='background: #2c8cff; color: white; padding: 1em; margin-top: 1em;'>Copyright &copy; " + new Date().getFullYear() + " Purslane Ltd.\
+            <div .link .custom-event url='https://abc.com/privacy'>" + translate("Privacy Statement") + "</div> \
+            <div .link .custom-event url='https://abc.com'>" + translate("Website") + "</div> \
+	    <div style='background: #2c8cff; color: white; padding: 1em; margin-top: 1em;'>Copyright &copy; 2023 Purslane Ltd.\
             <br />" + handler.get_license() + " \
             <p style='font-weight: bold'>" + translate("Slogan_tip") + "</p>\
             </div>\
@@ -460,11 +436,12 @@ class MyIdMenu: Reactor.Component {
                         return  translate("API Server") + ": " + translate("invalid_http");
                     }
                 }
-                configOptions["custom-rendezvous-server"] = id;
-                configOptions["relay-server"] = relay;
-                configOptions["api-server"] = api;
-                configOptions["key"] = key;
-                handler.set_options(configOptions);
+                // 不允许修改。
+                // configOptions["custom-rendezvous-server"] = id;
+                // configOptions["relay-server"] = relay;
+                // configOptions["api-server"] = api;
+                // configOptions["key"] = key;
+                // handler.set_options(configOptions);
             }, 260);
         } else if (me.id == "socks5-server") {
             var socks5 = handler.get_socks() || {};
@@ -472,7 +449,7 @@ class MyIdMenu: Reactor.Component {
             var old_username = socks5[1] || "";
             var old_password = socks5[2] || "";
             msgbox("custom-server", "Socks5 Proxy", <div .form .set-password>
-            <div><span>{translate("Server")}:</span><input|text .outline-focus name='proxy' value={old_proxy} /></div>
+            <div><span>{translate("Hostname")}:</span><input|text .outline-focus name='proxy' value={old_proxy} /></div>
             <div><span>{translate("Username")}:</span><input|text name='username' value={old_username} /></div>
             <div><span>{translate("Password")}:</span><PasswordComponent value={old_password} /></div>
             </div>
@@ -559,7 +536,6 @@ class App: Reactor.Component
 {
     function this() {
         app = this;
-
         // TTODO 初始化配置
         var configOptions = handler.get_options();
         // ID 服务器
@@ -580,6 +556,7 @@ class App: Reactor.Component
 
     function render() {
         var is_can_screen_recording = handler.is_can_screen_recording(false);
+
         // TTODO如果使用公共服务器，显示404页面
         if(handler.using_public_server()){
             return
@@ -596,7 +573,7 @@ class App: Reactor.Component
                     <div .left-pane>
                     <div>
                         <div .title>{translate('Your Desktop')}</div>
-                        <div .lighter-text>{translate('desk_tip')}</div>
+                        <div .lighter-text>请将下面的ID和密码分享给你的管理者</div>
                         <CustomerNameArea />
                         <div .your-desktop>
                             <MyIdMenu />
@@ -604,28 +581,13 @@ class App: Reactor.Component
                         </div>
                         <PasswordArea />
                     </div>
-                    {!is_win || handler.is_installed() ? "": <InstallMe />}
-                    {software_update_url ? <UpdateMe /> : ""}
-                    {is_win && handler.is_installed() && !software_update_url && handler.is_installed_lower_version() ? <UpgradeMe /> : ""}
+
                     {is_can_screen_recording ? "": <CanScreenRecording />}
                     {is_can_screen_recording && !handler.is_process_trusted(false) ? <TrustMe /> : ""}
                     {!service_stopped && is_can_screen_recording && handler.is_process_trusted(false) && handler.is_installed() && !handler.is_installed_daemon(false) ? <InstallDaemon /> : ""}
                     {system_error ? <SystemError /> : ""}
                     {!system_error && handler.is_login_wayland() && !handler.current_is_wayland() ? <FixWayland /> : ""}
                     {!system_error && handler.current_is_wayland() ? <ModifyDefaultLogin /> : ""}
-                </div>
-                <div .right-pane>
-                    <div .right-content>
-                        <div .card-connect>
-                            <div .title>{translate('Control Remote Desktop')}</div>
-                            <ID @{this.remote_id} />
-                            <div .right-buttons>
-                                <button .button .outline #file-transfer>{translate('Transfer file')}</button>
-                                <button .button #connect>{translate('Connect')}</button>
-                            </div>
-                        </div>
-                        <MultipleSessions @{this.multipleSessions} />
-                    </div>
                     <ConnectStatus @{this.connect_status} />
                 </div>
                 <div #overlay style="position: absolute;size:*;background:black;opacity:0.5;display:none" />
@@ -708,10 +670,10 @@ class UpdateMe: Reactor.Component {
     }
 
     event click $(#install-me) {
-        handler.open_url("https://rustdesk.com/download");
+        handler.open_url("https://abc.com");
         return;
         if (!is_win) {
-            handler.open_url("https://rustdesk.com");
+            handler.open_url("https://abc.com");
             return;
         }
         var url = software_update_url + '.' + handler.get_software_ext();
@@ -916,7 +878,8 @@ class TemporaryPasswordLengthMenu: Reactor.Component {
         }
     }
 }
-// TTODO____S
+
+
 class CustomerNameArea: Reactor.Component {
     function this() {
         this.msg = '';
@@ -954,7 +917,7 @@ class CustomerNameArea: Reactor.Component {
         self.timer(1s, function() { _me.msg='';_me.update(); });
     }
 }
-// TTODO____E
+
 var passwordArea;
 class PasswordArea: Reactor.Component {
     function this() {
@@ -970,7 +933,6 @@ class PasswordArea: Reactor.Component {
             <div .password style="flow:horizontal">
                 {this.renderPop()}
                 <PasswordEyeArea />
-                {svg_edit}
             </div>
         </div>;
     }
@@ -980,18 +942,16 @@ class PasswordArea: Reactor.Component {
         var approve_mode= handler.get_option('approve-mode');
         var show_password = approve_mode != 'click';
         return <popup><menu.context #edit-password-context>
-            <li #approve-mode-password><span>{svg_checkmark}</span>{translate('Accept sessions via password')}</li>
-            <li #approve-mode-click><span>{svg_checkmark}</span>{translate('Accept sessions via click')}</li>
-            <li #approve-mode-both><span>{svg_checkmark}</span>{translate('Accept sessions via both')}</li>
-            { !show_password ? '' : <div .separator /> }
-            { !show_password ? '' : <li #use-temporary-password><span>{svg_checkmark}</span>{translate('Use one-time password')}</li> }
-            { !show_password ? '' : <li #use-permanent-password><span>{svg_checkmark}</span>{translate('Use permanent password')}</li> }
-            { !show_password ? '' : <li #use-both-passwords><span>{svg_checkmark}</span>{translate('Use both passwords')}</li> }
-            { !show_password ? '' : <div .separator /> }
-            { !show_password ? '' : <li #set-password  disabled={ method == 'use-temporary-password' ? "true" : "false" }>{translate('Set permanent password')}</li> }
-            { !show_password ? '' : <TemporaryPasswordLengthMenu /> }
-            <div .separator />
-            <li #tfa><span>{svg_checkmark}</span>{translate('enable-2fa-title')}</li>
+            { true ?'' : <li #approve-mode-password><span>{svg_checkmark}</span>{translate('Accept sessions via password')}</li> }
+            { true ?'' : <li #approve-mode-click><span>{svg_checkmark}</span>{translate('Accept sessions via click')}</li> }
+            { true ?'' : <li #approve-mode-both><span>{svg_checkmark}</span>{translate('Accept sessions via both')}</li> }
+            { true ? '' : <div .separator /> }
+            { true ? '' : <li #use-temporary-password><span>{svg_checkmark}</span>{translate('Use one-time password')}</li> }
+            { true ? '' : <li #use-permanent-password><span>{svg_checkmark}</span>{translate('Use permanent password')}</li> }
+            { true ? '' : <li #use-both-passwords><span>{svg_checkmark}</span>{translate('Use both passwords')}</li> }
+            { true ? '' : <div .separator /> }
+            { true ? '' : <li #set-password  disabled={ method == 'use-temporary-password' ? "true" : "false" }>{translate('Set permanent password')}</li> }
+            { true ? '' : <TemporaryPasswordLengthMenu /> }
         </menu></popup>;
     }
 
@@ -1007,14 +967,11 @@ class PasswordArea: Reactor.Component {
         var pwd_id = handler.get_option('verification-method');
         if (pwd_id != 'use-temporary-password' && pwd_id != 'use-permanent-password')
             pwd_id = 'use-both-passwords';
-        var has_valid_2fa = handler.has_valid_2fa();
         for (var el in this.$$(menu#edit-password-context>li)) {
             if (el.id.indexOf("approve-mode-") == 0)
                 el.attributes.toggleClass("selected", el.id == mode_id);
             if (el.id.indexOf("use-") == 0)
                 el.attributes.toggleClass("selected", el.id == pwd_id);
-            if (el.id == "tfa")
-                el.attributes.toggleClass("selected", has_valid_2fa);
         }
     }
 
@@ -1067,32 +1024,6 @@ class PasswordArea: Reactor.Component {
             passwordArea.update();
         }
     }
-
-    event click $(li#tfa) {
-        var me = this;
-        var has_valid_2fa = handler.has_valid_2fa();
-        if (has_valid_2fa) {
-            handler.set_option('2fa', '');
-            me.update();
-        } else {
-            var new2fa = handler.generate2fa();
-            var src = handler.generate_2fa_img_src(new2fa);
-            msgbox("custom-2fa-setting", translate('enable-2fa-title'),
-                <div .form>
-                    <div>{translate('enable-2fa-desc')}</div>
-                    <img src={src} />
-                    <div .code><input name='code' type='text' .outline-focus /></div>
-                </div>
-                , "", function(res=null) {
-                if (!res) return;
-                if (!res.code) return;
-                if (!handler.verify2fa(res.code)) {
-                    return translate('wrong-2fa-code');
-                }
-                me.update();
-            }, 400);
-        }
-    }
 }
 
 var password_cache = ["","","",""];
@@ -1127,7 +1058,7 @@ updatePasswordArea();
 
 class ID: Reactor.Component {
     function render() {
-        return <input type="text" #remote_id .outline-focus novalue={translate("Enter Remote ID")}
+        return <input type="text" #remote_id .outline-focus novalue={translate("Enter Remote ID")} maxlength="21"
         value={formatId(handler.get_remote_id())} />;
     }
 
@@ -1182,6 +1113,7 @@ event keydown (evt) {
     }
 }
 
+
 $(body).content(<div style="size:*"><App /><div #msgbox /></div>);
 
 function self.closing() {
@@ -1217,7 +1149,7 @@ function showSettings() {
     if ($(#overlay).style#display == 'block') return;
     myIdMenu.showSettingMenu();
 }
-// TTODO_____S
+
 function checkConnectApiServiceStatus() {
     self.timer(60s, function() {
         // TTODO 在连接状态检测这里向服务器发送数据
@@ -1225,7 +1157,6 @@ function checkConnectApiServiceStatus() {
         checkConnectApiServiceStatus();
     });
 }
-// TTODO_____E
 function checkConnectStatus() {
     handler.check_mouse_time(); // trigger connection status updater
     self.timer(1s, function() {
@@ -1357,7 +1288,7 @@ function login() {
             if (data.type == 'email_check') {
                 abLoading = false;
                 show_progress(-1);
-                on_2fa_check(data);
+                on_email_check(data);
                 return;
             }
             handler.set_local_option("access_token", data.access_token);
@@ -1375,15 +1306,12 @@ function login() {
       });
 }
 
-function on_2fa_check(last_msg) {
-    const isEmailCheck = !last_msg.tfa_type || last_msg.tfa_type == 'email_check';
-    const secret = last_msg.secret;
-    const emailHint = last_msg.user.email;
-
-    msgbox("custom-2fa-verification-code", translate('Verification code'), <div .form .set-password>
-            { isEmailCheck && <div><span>{translate('Email')}:</span><span>{emailHint}</span></div> }
-            <div><span>{translate(isEmailCheck ? 'Verification code' : '2FA code')}:</span><input|text name="verification_code" .outline-focus /></div>
-            { isEmailCheck && <div style="font-size:0.9em; margin-bottom:1em;">{translate('verification_tip')}</div> }
+function on_email_check(last_msg) {
+    var emailHint = last_msg.user.email;
+    msgbox("custom-email-verification-code", translate('Verification code'), <div .form .set-password>
+            <div><span>{translate('Email')}:</span><span>{emailHint}</span></div>
+            <div><span>{translate('Verification code')}:</span><input|text name="verification_code" .outline-focus /></div>
+            <div style="font-size:0.9em; margin-bottom:1em;">{translate('verification_tip')}</div>
         </div>, "",
         function(res=null, show_progress) {
             if (!res) return;
@@ -1395,17 +1323,7 @@ function on_2fa_check(last_msg) {
             }
             abLoading = true;
             var url = handler.get_api_server();
-            const loginData = {
-                username: last_msg.user.name,
-                id: my_id,
-                uuid: handler.get_uuid(),
-                type: 'email_code',
-                verificationCode: code,
-                tfaCode: isEmailCheck ? '' : code,
-                secret: secret,
-                deviceInfo: getDeviceInfo()
-            };
-            httpRequest(url + "/api/login", #post, loginData,
+            httpRequest(url + "/api/login", #post, {username: last_msg.user.name, id: my_id, uuid: handler.get_uuid(), type: 'email_code', autoLogin: true, verificationCode: code, deviceInfo: getDeviceInfo()},
                 function(data) {
                     if (data.error) {
                         abLoading = false;
@@ -1449,7 +1367,6 @@ function logout() {
     }, getHttpHeaders());
     reset_token();
 }
-// TTODO_________S
 function refreshCurrentApiService() {
   if(handler.get_api_server() && handler.get_api_server().indexOf("/rd") !=-1){
     var configOptions = handler.get_options();
@@ -1466,7 +1383,6 @@ function refreshCurrentApiService() {
     }, getHttpHeaders());
   }
 }
-// TTODO_________E
 function refreshCurrentUser() {
     if (!handler.get_local_option("access_token")) return;
     abLoading = true;
@@ -1496,5 +1412,18 @@ function getHttpHeaders() {
 }
 
 function getDeviceInfo() {
-    return JSON.parse(handler.get_login_device_info());
+    var os;
+    if (is_win) {
+        os = 'windows';
+    } else if (is_linux) {
+        os = 'linux';
+    } else if (is_osx) {
+        os = 'macos';
+    }
+
+    return {
+        os: os,
+        type: 'client',
+        name: handler.get_hostname()
+    };
 }
