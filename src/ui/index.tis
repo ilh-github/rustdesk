@@ -3,11 +3,11 @@ stdout.println("current platform:", OS);
 stdout.println("is_xfce: ", is_xfce);
 
 // html min-width, min-height not working on mac, below works for all
-// 设置窗口最小尺寸
-view.windowMinSize = (scaleIt(300), scaleIt(265));
-view.windowMaxSize = (scaleIt(300), scaleIt(265));
+// Set the minimum window size
+try {view.windowMinSize = (scaleIt(300), scaleIt(265));
+view.windowMaxSize = (scaleIt(300), scaleIt(265));} catch(e) {}
 
-// view.windowIcon 设置图标
+// view.windowIcon Set icon
 try { view.windowIcon = null } catch(e) {}
 
 var app;
