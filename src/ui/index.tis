@@ -3,12 +3,7 @@ stdout.println("current platform:", OS);
 stdout.println("is_xfce: ", is_xfce);
 
 // html min-width, min-height not working on mac, below works for all
-// Set the minimum window size
-try {view.windowMinSize = (scaleIt(300), scaleIt(265));
-view.windowMaxSize = (scaleIt(300), scaleIt(265));} catch(e) {}
-
-// view.windowIcon Set icon
-try { view.windowIcon = null } catch(e) {}
+view.windowMinSize = (scaleIt(560), scaleIt(300));
 
 var app;
 var tmp = handler.get_connect_status();
@@ -69,7 +64,7 @@ function createNewConnect(id, type) {
     if (!id) return;
     var old_id = id;
     id = handler.handle_relay_id(id);
-    var force_relay = old_id != id;
+    var force_relay = old_id != id; 
     if (id == my_id) {
         msgbox("custom-error", "Error", "You cannot connect to your own computer");
         return;
@@ -84,7 +79,7 @@ class ShareRdp: Reactor.Component {
         var cls = handler.is_share_rdp()  ? "selected" : "line-through";
         return <li class={cls}><span>{svg_checkmark}</span>{rdp_shared_string}</li>;
     }
-
+    
     function onClick() {
         handler.set_share_rdp(!handler.is_share_rdp());
         this.update();
@@ -103,7 +98,7 @@ class DirectServer: Reactor.Component {
         var cls = enabled ? "selected" : "line-through";
         return <li class={cls}><span>{svg_checkmark}</span>{text}{enabled && <EditDirectAccessPort />}</li>;
     }
-
+    
     function onClick() {
         if (is_edit_rdp_port) {
             is_edit_rdp_port = false;
@@ -309,8 +304,8 @@ class MyIdMenu: Reactor.Component {
             <menu.context #config-options>
                 <li #enable-keyboard><span>{svg_checkmark}</span>{translate('Enable keyboard/mouse')}</li>
                 <li #enable-clipboard><span>{svg_checkmark}</span>{translate('Enable clipboard')}</li>
-                <li #enable-file-transfer><span>{svg_checkmark}</span>{translate('Enable file transfer')}</li>
-                <li #enable-remote-restart><span>{svg_checkmark}</span>{translate('Enable remote restart')}</li>
+                <li #enable-file-transfer><span>{svg_checkmark}</span>{translate('Enable file transfer')}</li> 
+                <li #enable-remote-restart><span>{svg_checkmark}</span>{translate('Enable remote restart')}</li> 
                 <li #enable-tunnel><span>{svg_checkmark}</span>{translate('Enable TCP tunneling')}</li>
                 {is_win ? <li #enable-block-input><span>{svg_checkmark}</span>{translate('Enable blocking user input')}</li> : ""}
                 <li #enable-lan-discovery><span>{svg_checkmark}</span>{translate('Enable LAN discovery')}</li>
@@ -327,7 +322,7 @@ class MyIdMenu: Reactor.Component {
                 <DirectServer />
                 {false && handler.using_public_server() && <li #allow-always-relay><span>{svg_checkmark}</span>{translate('Always connect via relay')}</li>}
                 {handler.is_ok_change_id() ? <div .separator /> : ""}
-                {username ?
+                {username ? 
                 <li #logout>{translate('Logout')} ({username})</li> :
                 <li #login>{translate('Login')}</li>}
                 {handler.is_ok_change_id() && key_confirmed && connect_status > 0 ? <li #change-id>{translate('Change ID')}</li> : ""}
@@ -465,7 +460,7 @@ class MyIdMenu: Reactor.Component {
             var old_proxy = socks5[0] || "";
             var old_username = socks5[1] || "";
             var old_password = socks5[2] || "";
-            msgbox("custom-server", "Socks5 Proxy", <div .form .set-password>
+            msgbox("custom-server", "Socks5 Proxy", <div .form .set-password> 
             <div><span>{translate("Server")}:</span><input|text .outline-focus name='proxy' value={old_proxy} /></div>
             <div><span>{translate("Username")}:</span><input|text name='username' value={old_username} /></div>
             <div><span>{translate("Password")}:</span><PasswordComponent value={old_password} /></div>
@@ -640,7 +635,7 @@ function download(from, to, args..) {
                 case 1: rqp.params = p; break;
                 case 2: rqp.headers = p; break;
             }
-        }
+        }  
     }
     view.request(rqp);
 }
@@ -686,7 +681,7 @@ class UpdateMe: Reactor.Component {
             handler.update_me(path);
         };
         var onerror = function(err) {
-            msgbox("custom-error", "Download Error", "Failed to download");
+            msgbox("custom-error", "Download Error", "Failed to download"); 
         };
         var onprogress = function(loaded, total) {
             if (!total) total = 5 * 1024 * 1024;
@@ -724,7 +719,7 @@ class TrustMe: Reactor.Component {
         handler.is_process_trusted(true);
         watch_trust();
     }
-
+    
     event click $(#help-me) {
         handler.open_url(translate("doc_mac_permission"));
     }
@@ -744,7 +739,7 @@ class CanScreenRecording: Reactor.Component {
         handler.is_can_screen_recording(true);
         watch_screen_recording();
     }
-
+    
     event click $(#help-me) {
         handler.open_url(translate("doc_mac_permission"));
     }
@@ -891,7 +886,7 @@ class PasswordArea: Reactor.Component {
     function render() {
         var me = this;
         self.timer(1ms, function() { me.toggleMenuState() });
-        return
+        return 
         <div .your-desktop>
             <div>{translate('One-time Password')}</div>
             <div .password style="flow:horizontal">
@@ -949,7 +944,7 @@ class PasswordArea: Reactor.Component {
         var approve_mode= handler.get_option('approve-mode');
         var show_password = approve_mode != 'click';
         if(show_password && temporaryPasswordLengthMenu) temporaryPasswordLengthMenu.update({show: true });
-        var menu = $(menu#edit-password-context);
+        var menu = $(menu#edit-password-context);        
         me.popup(menu);
     }
 
@@ -1048,7 +1043,7 @@ function updatePasswordArea() {
         }
         if (update) passwordArea.update();
         updatePasswordArea();
-    });
+    });                          
 }
 updatePasswordArea();
 
@@ -1188,14 +1183,14 @@ function checkConnectStatus() {
             app.update();
         }
         check_if_overlay();
-        checkConnectStatus();
-    });
-}
-
-var enter = false;
-function self.onMouse(evt) {
-    switch(evt.type) {
-    case Event.MOUSE_ENTER:
+        checkConnectStatus();    
+    });                          
+}                                
+                                 
+var enter = false;               
+function self.onMouse(evt) {     
+    switch(evt.type) {           
+    case Event.MOUSE_ENTER:    
         enter = true;
         check_if_overlay();
         break;
@@ -1231,9 +1226,9 @@ function set_local_user_info(user) {
 function login() {
     var name0 = getUserName();
     var pass0 = '';
-    msgbox("custom-login", translate('Login'), <div .form .set-password>
-            <div><span>{translate('Username')}:</span><input|text name="username" value={name0} .outline-focus /></div>
-            <div><span>{translate('Password')}:</span><PasswordComponent value={pass0} /></div>
+    msgbox("custom-login", translate('Login'), <div .form .set-password> 
+            <div><span>{translate('Username')}:</span><input|text name="username" value={name0} .outline-focus /></div> 
+            <div><span>{translate('Password')}:</span><PasswordComponent value={pass0} /></div> 
         </div>, "", function(res=null, show_progress) {
         if (!res) return;
         show_progress();
@@ -1282,11 +1277,11 @@ function on_2fa_check(last_msg) {
     const secret = last_msg.secret;
     const emailHint = last_msg.user.email;
 
-    msgbox("custom-2fa-verification-code", translate('Verification code'), <div .form .set-password>
+    msgbox("custom-2fa-verification-code", translate('Verification code'), <div .form .set-password> 
             { isEmailCheck && <div><span>{translate('Email')}:</span><span>{emailHint}</span></div> }
-            <div><span>{translate(isEmailCheck ? 'Verification code' : '2FA code')}:</span><input|text name="verification_code" .outline-focus /></div>
+            <div><span>{translate(isEmailCheck ? 'Verification code' : '2FA code')}:</span><input|text name="verification_code" .outline-focus /></div> 
             { isEmailCheck && <div style="font-size:0.9em; margin-bottom:1em;">{translate('verification_tip')}</div> }
-        </div>, "",
+        </div>, "", 
         function(res=null, show_progress) {
             if (!res) return;
             show_progress();
@@ -1307,7 +1302,7 @@ function on_2fa_check(last_msg) {
                 secret: secret,
                 deviceInfo: getDeviceInfo()
             };
-            httpRequest(url + "/api/login", #post, loginData,
+            httpRequest(url + "/api/login", #post, loginData, 
                 function(data) {
                     if (data.error) {
                         abLoading = false;
@@ -1374,7 +1369,7 @@ function refreshCurrentUser() {
         }
         handleAbError(err);
     }, getHttpHeaders());
-}
+} 
 
 function getHttpHeaders() {
     return "Authorization: Bearer " + handler.get_local_option("access_token");
