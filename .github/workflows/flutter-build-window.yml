@@ -8,7 +8,7 @@ on:
         default: true
       upload-tag:
         type: string
-        default: "win7"
+        default: "win7-utf8"
 
 env:
   RUST_VERSION: "1.75" # https://github.com/rustdesk/rustdesk/discussions/7503
