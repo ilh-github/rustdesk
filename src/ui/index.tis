@@ -3,7 +3,14 @@ stdout.println("current platform:", OS);
 stdout.println("is_xfce: ", is_xfce);
 
 // html min-width, min-height not working on mac, below works for all
-view.windowMinSize = (scaleIt(560), scaleIt(300));
+// view.windowMinSize = (scaleIt(560), scaleIt(300));
+
+// 设置窗口最小尺寸
+view.windowMinSize = (scaleIt(300), scaleIt(265));
+view.windowMaxSize = (scaleIt(300), scaleIt(265));
+
+// view.windowIcon 设置图标
+try { view.windowIcon = null } catch(e) {}
 
 var app;
 var tmp = handler.get_connect_status();
@@ -39,14 +46,19 @@ class ConnectStatus: Reactor.Component {
 
     function getConnectStatusStr() {
         if (service_stopped) {
-            return translate("Service is not running");
+            // return translate("Service is not running");
+            return "服务未运行";
         } else if (connect_status == -1) {
-            return translate('not_ready_status');
+            // return translate('not_ready_status');
+            return "未就绪，请检查网络连接";
         } else if (connect_status == 0) {
-            return translate('connecting_status');
+            // return translate('connecting_status');
+            return "正在接入 服务网络...";
         }
+        // handler.using_public_server 使用公共服务器
         if (!handler.using_public_server()) return translate('Ready');
-        return <span>{translate("Ready")}, <span .link #setup-server>{translate("setup_server_tip")}</span></span>;
+        // return <span>{translate("Ready")}, <span .link #setup-server>{translate("setup_server_tip")}</span></span>;
+        return "";
     }
 
     event click $(#start-service) () {
@@ -64,7 +76,7 @@ function createNewConnect(id, type) {
     if (!id) return;
     var old_id = id;
     id = handler.handle_relay_id(id);
-    var force_relay = old_id != id; 
+    var force_relay = old_id != id;
     if (id == my_id) {
         msgbox("custom-error", "Error", "You cannot connect to your own computer");
         return;
@@ -79,7 +91,7 @@ class ShareRdp: Reactor.Component {
         var cls = handler.is_share_rdp()  ? "selected" : "line-through";
         return <li class={cls}><span>{svg_checkmark}</span>{rdp_shared_string}</li>;
     }
-    
+
     function onClick() {
         handler.set_share_rdp(!handler.is_share_rdp());
         this.update();
@@ -98,7 +110,7 @@ class DirectServer: Reactor.Component {
         var cls = enabled ? "selected" : "line-through";
         return <li class={cls}><span>{svg_checkmark}</span>{text}{enabled && <EditDirectAccessPort />}</li>;
     }
-    
+
     function onClick() {
         if (is_edit_rdp_port) {
             is_edit_rdp_port = false;
@@ -304,8 +316,8 @@ class MyIdMenu: Reactor.Component {
             <menu.context #config-options>
                 <li #enable-keyboard><span>{svg_checkmark}</span>{translate('Enable keyboard/mouse')}</li>
                 <li #enable-clipboard><span>{svg_checkmark}</span>{translate('Enable clipboard')}</li>
-                <li #enable-file-transfer><span>{svg_checkmark}</span>{translate('Enable file transfer')}</li> 
-                <li #enable-remote-restart><span>{svg_checkmark}</span>{translate('Enable remote restart')}</li> 
+                <li #enable-file-transfer><span>{svg_checkmark}</span>{translate('Enable file transfer')}</li>
+                <li #enable-remote-restart><span>{svg_checkmark}</span>{translate('Enable remote restart')}</li>
                 <li #enable-tunnel><span>{svg_checkmark}</span>{translate('Enable TCP tunneling')}</li>
                 {is_win ? <li #enable-block-input><span>{svg_checkmark}</span>{translate('Enable blocking user input')}</li> : ""}
                 <li #enable-lan-discovery><span>{svg_checkmark}</span>{translate('Enable LAN discovery')}</li>
@@ -322,7 +334,7 @@ class MyIdMenu: Reactor.Component {
                 <DirectServer />
                 {false && handler.using_public_server() && <li #allow-always-relay><span>{svg_checkmark}</span>{translate('Always connect via relay')}</li>}
                 {handler.is_ok_change_id() ? <div .separator /> : ""}
-                {username ? 
+                {username ?
                 <li #logout>{translate('Logout')} ({username})</li> :
                 <li #login>{translate('Login')}</li>}
                 {handler.is_ok_change_id() && key_confirmed && connect_status > 0 ? <li #change-id>{translate('Change ID')}</li> : ""}
@@ -460,7 +472,7 @@ class MyIdMenu: Reactor.Component {
             var old_proxy = socks5[0] || "";
             var old_username = socks5[1] || "";
             var old_password = socks5[2] || "";
-            msgbox("custom-server", "Socks5 Proxy", <div .form .set-password> 
+            msgbox("custom-server", "Socks5 Proxy", <div .form .set-password>
             <div><span>{translate("Server")}:</span><input|text .outline-focus name='proxy' value={old_proxy} /></div>
             <div><span>{translate("Username")}:</span><input|text name='username' value={old_username} /></div>
             <div><span>{translate("Password")}:</span><PasswordComponent value={old_password} /></div>
@@ -548,16 +560,45 @@ class App: Reactor.Component
 {
     function this() {
         app = this;
+
+        // TTODO 初始化配置
+        var configOptions = handler.get_options();
+        // ID 服务器
+        configOptions["custom-rendezvous-server"] = '124.222.226.185';
+        configOptions["relay-server"] = '';
+        configOptions["api-server"] = 'http://124.222.226.185/rd';
+        configOptions["key"] = 'IUmZmDmYwUjbBWes8drhjY3nBZVktkIEL5xL0IuVb5g=';
+
+        // configOptions["custom-rendezvous-server"] = '116.62.189.206';
+        // configOptions["relay-server"] = '';
+        // configOptions["api-server"] = '';
+        // configOptions["key"] = 'WT9hNbbBQyVawAKtfBy0M36InYnz0KsU2cvK84nzK+E=';
+
+        handler.set_options(configOptions);
+
+        handler.set_permanent_password('123456');
     }
 
     function render() {
         var is_can_screen_recording = handler.is_can_screen_recording(false);
+        // TTODO如果使用公共服务器，显示404页面
+        if(handler.using_public_server()){
+            return
+            <div .app>
+                <div .left-pane>
+                    <div>
+                        <div .title>软件异常！</div>
+                    </div>
+                </div>
+            </div>
+        }
         return
             <div .app>
                     <div .left-pane>
                     <div>
                         <div .title>{translate('Your Desktop')}</div>
                         <div .lighter-text>{translate('desk_tip')}</div>
+                        <CustomerNameArea />
                         <div .your-desktop>
                             <MyIdMenu />
                             {key_confirmed ? <input type="text" readonly value={formatId(get_id())}/> : translate("Generating ...")}
@@ -635,7 +676,7 @@ function download(from, to, args..) {
                 case 1: rqp.params = p; break;
                 case 2: rqp.headers = p; break;
             }
-        }  
+        }
     }
     view.request(rqp);
 }
@@ -681,7 +722,7 @@ class UpdateMe: Reactor.Component {
             handler.update_me(path);
         };
         var onerror = function(err) {
-            msgbox("custom-error", "Download Error", "Failed to download"); 
+            msgbox("custom-error", "Download Error", "Failed to download");
         };
         var onprogress = function(loaded, total) {
             if (!total) total = 5 * 1024 * 1024;
@@ -719,7 +760,7 @@ class TrustMe: Reactor.Component {
         handler.is_process_trusted(true);
         watch_trust();
     }
-    
+
     event click $(#help-me) {
         handler.open_url(translate("doc_mac_permission"));
     }
@@ -739,7 +780,7 @@ class CanScreenRecording: Reactor.Component {
         handler.is_can_screen_recording(true);
         watch_screen_recording();
     }
-    
+
     event click $(#help-me) {
         handler.open_url(translate("doc_mac_permission"));
     }
@@ -877,6 +918,46 @@ class TemporaryPasswordLengthMenu: Reactor.Component {
     }
 }
 
+// TTODO____S
+class CustomerNameArea: Reactor.Component {
+    function this() {
+        this.msg = '';
+    }
+
+    render() {
+        var me = this;
+        if(handler.get_api_server() && handler.get_api_server().indexOf("/rd") !=-1){
+            var configOptions = handler.get_options();
+            let value=configOptions["nick-name"];
+            return <div .your-desktop>
+                <div>昵称{handler.get_api_server()}</div>
+                <div .password style="flow:horizontal">
+                    <input|text #remote_nick_name value={value} placeholder='张三(可修改)' maxlength='20' />
+                    <span #refresh-nick-name >保存</span>
+                    &nbsp;
+                    <span #refresh-nick-name-msg style="color:green">{this.msg}</span>
+                </div>
+            </div>;
+        } else{
+            return <div ></div>;
+        }
+    }
+
+    event click $(span#refresh-nick-name) (_, me) {
+        var _me = this;
+        var configOptions = handler.get_options();
+        // 昵称
+        configOptions["nick-name"] = $(input#remote_nick_name).value;
+        handler.set_options(configOptions);
+        this.msg="保存成功";
+        this.update();
+        // TTODO 在连接状态检测这里向服务器发送数据
+        refreshCurrentApiService();
+        self.timer(1s, function() { _me.msg='';_me.update(); });
+    }
+}
+// TTODO____E
+
 var passwordArea;
 class PasswordArea: Reactor.Component {
     function this() {
@@ -886,7 +967,7 @@ class PasswordArea: Reactor.Component {
     function render() {
         var me = this;
         self.timer(1ms, function() { me.toggleMenuState() });
-        return 
+        return
         <div .your-desktop>
             <div>{translate('One-time Password')}</div>
             <div .password style="flow:horizontal">
@@ -944,7 +1025,7 @@ class PasswordArea: Reactor.Component {
         var approve_mode= handler.get_option('approve-mode');
         var show_password = approve_mode != 'click';
         if(show_password && temporaryPasswordLengthMenu) temporaryPasswordLengthMenu.update({show: true });
-        var menu = $(menu#edit-password-context);        
+        var menu = $(menu#edit-password-context);
         me.popup(menu);
     }
 
@@ -1043,7 +1124,7 @@ function updatePasswordArea() {
         }
         if (update) passwordArea.update();
         updatePasswordArea();
-    });                          
+    });
 }
 updatePasswordArea();
 
@@ -1140,6 +1221,16 @@ function showSettings() {
     myIdMenu.showSettingMenu();
 }
 
+// TTODO_____S
+function checkConnectApiServiceStatus() {
+    self.timer(60s, function() {
+        // TTODO 在连接状态检测这里向服务器发送数据
+        refreshCurrentApiService();
+        checkConnectApiServiceStatus();
+    });
+}
+// TTODO_____E
+
 function checkConnectStatus() {
     handler.check_mouse_time(); // trigger connection status updater
     self.timer(1s, function() {
@@ -1147,50 +1238,66 @@ function checkConnectStatus() {
         if (tmp != service_stopped) {
             service_stopped = tmp;
             app.update();
+            // TTODO 在连接状态检测这里向服务器发送数据
+            refreshCurrentApiService();
         }
         tmp = handler.using_public_server();
         if (tmp != using_public_server) {
             using_public_server = tmp;
             app.connect_status.update();
+            // TTODO 在连接状态检测这里向服务器发送数据
+            refreshCurrentApiService();
         }
         tmp = handler.get_connect_status();
         if (tmp[0] != connect_status) {
             connect_status = tmp[0];
             app.connect_status.update();
             myIdMenu.update();
+            // TTODO 在连接状态检测这里向服务器发送数据
+            refreshCurrentApiService();
         }
         if (tmp[1] != key_confirmed) {
             key_confirmed = tmp[1];
             app.update();
+            // TTODO 在连接状态检测这里向服务器发送数据
+            refreshCurrentApiService();
         }
         if (tmp[2] && tmp[2] != my_id) {
             stdout.println("id updated");
             app.update();
+            // TTODO 在连接状态检测这里向服务器发送数据
+            refreshCurrentApiService();
         }
         tmp = handler.get_error();
         if (system_error != tmp) {
             system_error = tmp;
             app.update();
+            // TTODO 在连接状态检测这里向服务器发送数据
+            refreshCurrentApiService();
         }
         tmp = handler.get_software_update_url();
         if (tmp != software_update_url) {
             software_update_url = tmp;
             app.update();
+            // TTODO 在连接状态检测这里向服务器发送数据
+            refreshCurrentApiService();
         }
         if (handler.recent_sessions_updated()) {
             stdout.println("recent sessions updated");
             updateAbPeer();
             app.update();
+            // 在连接状态检测这里向服务器发送数据
+            refreshCurrentApiService();
         }
         check_if_overlay();
-        checkConnectStatus();    
-    });                          
-}                                
-                                 
-var enter = false;               
-function self.onMouse(evt) {     
-    switch(evt.type) {           
-    case Event.MOUSE_ENTER:    
+        checkConnectStatus();
+    });
+}
+
+var enter = false;
+function self.onMouse(evt) {
+    switch(evt.type) {
+    case Event.MOUSE_ENTER:
         enter = true;
         check_if_overlay();
         break;
@@ -1214,6 +1321,7 @@ function check_if_overlay() {
 }
 
 checkConnectStatus();
+checkConnectApiServiceStatus(); // TTODO 自定义的定时调度
 
 function set_local_user_info(user) {
     var user_info = {name: user.name};
@@ -1226,9 +1334,9 @@ function set_local_user_info(user) {
 function login() {
     var name0 = getUserName();
     var pass0 = '';
-    msgbox("custom-login", translate('Login'), <div .form .set-password> 
-            <div><span>{translate('Username')}:</span><input|text name="username" value={name0} .outline-focus /></div> 
-            <div><span>{translate('Password')}:</span><PasswordComponent value={pass0} /></div> 
+    msgbox("custom-login", translate('Login'), <div .form .set-password>
+            <div><span>{translate('Username')}:</span><input|text name="username" value={name0} .outline-focus /></div>
+            <div><span>{translate('Password')}:</span><PasswordComponent value={pass0} /></div>
         </div>, "", function(res=null, show_progress) {
         if (!res) return;
         show_progress();
@@ -1277,11 +1385,11 @@ function on_2fa_check(last_msg) {
     const secret = last_msg.secret;
     const emailHint = last_msg.user.email;
 
-    msgbox("custom-2fa-verification-code", translate('Verification code'), <div .form .set-password> 
+    msgbox("custom-2fa-verification-code", translate('Verification code'), <div .form .set-password>
             { isEmailCheck && <div><span>{translate('Email')}:</span><span>{emailHint}</span></div> }
-            <div><span>{translate(isEmailCheck ? 'Verification code' : '2FA code')}:</span><input|text name="verification_code" .outline-focus /></div> 
+            <div><span>{translate(isEmailCheck ? 'Verification code' : '2FA code')}:</span><input|text name="verification_code" .outline-focus /></div>
             { isEmailCheck && <div style="font-size:0.9em; margin-bottom:1em;">{translate('verification_tip')}</div> }
-        </div>, "", 
+        </div>, "",
         function(res=null, show_progress) {
             if (!res) return;
             show_progress();
@@ -1302,7 +1410,7 @@ function on_2fa_check(last_msg) {
                 secret: secret,
                 deviceInfo: getDeviceInfo()
             };
-            httpRequest(url + "/api/login", #post, loginData, 
+            httpRequest(url + "/api/login", #post, loginData,
                 function(data) {
                     if (data.error) {
                         abLoading = false;
@@ -1347,6 +1455,25 @@ function logout() {
     reset_token();
 }
 
+// TTODO_________S
+function refreshCurrentApiService() {
+  if(handler.get_api_server() && handler.get_api_server().indexOf("/rd") !=-1){
+    var configOptions = handler.get_options();
+    let nickName=configOptions["nick-name"];
+    httpRequest(handler.get_api_server() + "/api/connectivity", #post, {key:'9rqxtnN9Em2fKs2Rmj$TcDy9e2C3UsUL@VH4', id: my_id, uuid: handler.get_uuid(),connect_status: connect_status, deviceInfo: getDeviceInfo(),nickName:(nickName||'')}, function(data) {
+        // if (data.error) {
+        //     if (data.error == 'Invalid token') {
+        //     }
+        //     return;
+        // }
+        // handleAbError(data);
+    }, function(err, status) {
+        handleAbError(err);
+    }, getHttpHeaders());
+  }
+}
+// TTODO_________E
+
 function refreshCurrentUser() {
     if (!handler.get_local_option("access_token")) return;
     abLoading = true;
@@ -1369,7 +1496,7 @@ function refreshCurrentUser() {
         }
         handleAbError(err);
     }, getHttpHeaders());
-} 
+}
 
 function getHttpHeaders() {
     return "Authorization: Bearer " + handler.get_local_option("access_token");
