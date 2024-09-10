@@ -644,6 +644,7 @@ class App: Reactor.Component
 }
 
 class InstallMe: Reactor.Component {
+
     function render() {
         return <div .install-me>
             <span />
