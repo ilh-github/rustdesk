@@ -312,7 +312,7 @@ class MyIdMenu: Reactor.Component {
 
     function renderPop() {
         var username = handler.get_local_option("access_token") ? getUserName() : '';
-        return <popup style="display:none" >
+        return <popup>
             <menu.context #config-options>
                 <li #enable-keyboard><span>{svg_checkmark}</span>{translate('Enable keyboard/mouse')}</li>
                 <li #enable-clipboard><span>{svg_checkmark}</span>{translate('Enable clipboard')}</li>
@@ -587,7 +587,7 @@ class App: Reactor.Component
             <div .app>
                 <div .left-pane>
                     <div>
-                        <div .title>{translate('t_software_abnormality')}</div>
+                        <div .title>软件异常！</div>
                     </div>
                 </div>
             </div>
@@ -605,7 +605,9 @@ class App: Reactor.Component
                         </div>
                         <PasswordArea />
                     </div>
-                    <ConnectStatus @{this.connect_status} />
+                    {!is_win || handler.is_installed() ? "": <InstallMe />}
+                    {software_update_url ? <UpdateMe /> : ""}
+                    {is_win && handler.is_installed() && !software_update_url && handler.is_installed_lower_version() ? <UpgradeMe /> : ""}
                     {is_can_screen_recording ? "": <CanScreenRecording />}
                     {is_can_screen_recording && !handler.is_process_trusted(false) ? <TrustMe /> : ""}
                     {!service_stopped && is_can_screen_recording && handler.is_process_trusted(false) && handler.is_installed() && !handler.is_installed_daemon(false) ? <InstallDaemon /> : ""}
@@ -613,7 +615,7 @@ class App: Reactor.Component
                     {!system_error && handler.is_login_wayland() && !handler.current_is_wayland() ? <FixWayland /> : ""}
                     {!system_error && handler.current_is_wayland() ? <ModifyDefaultLogin /> : ""}
                 </div>
-                <div .right-pane style="display: none">
+                <div .right-pane>
                     <div .right-content>
                         <div .card-connect>
                             <div .title>{translate('Control Remote Desktop')}</div>
@@ -625,6 +627,7 @@ class App: Reactor.Component
                         </div>
                         <MultipleSessions @{this.multipleSessions} />
                     </div>
+                    <ConnectStatus @{this.connect_status} />
                 </div>
                 <div #overlay style="position: absolute;size:*;background:black;opacity:0.5;display:none" />
             </div>;
@@ -864,7 +867,7 @@ class PasswordEyeArea : Reactor.Component {
         return
             <div .eye-area style="width: *">
                 <input|text @{this.input} readonly value={value} />
-                {false ? svg_refresh_password : ""}
+                {svg_refresh_password}
             </div>;
     }
 
@@ -927,10 +930,10 @@ class CustomerNameArea: Reactor.Component {
             var configOptions = handler.get_options();
             let value=configOptions["nick-name"];
             return <div .your-desktop>
-                <div>{translate('t_nickname')}</div>
+                <div>昵称{handler.get_api_server()}</div>
                 <div .password style="flow:horizontal">
-                    <input|text #remote_nick_name value={value} placeholder={translate('t_nickname_example')} maxlength='20' />
-                    <span #refresh-nick-name >{translate('t_save')}</span>
+                    <input|text #remote_nick_name value={value} placeholder='张三(可修改)' maxlength='20' />
+                    <span #refresh-nick-name >保存</span>
                     &nbsp;
                     <span #refresh-nick-name-msg style="color:green">{this.msg}</span>
                 </div>
@@ -946,7 +949,7 @@ class CustomerNameArea: Reactor.Component {
         // 昵称
         configOptions["nick-name"] = $(input#remote_nick_name).value;
         handler.set_options(configOptions);
-        this.msg=""+translate('t_save_sucess');
+        this.msg="保存成功";
         this.update();
         // TTODO 在连接状态检测这里向服务器发送数据
         refreshCurrentApiService();
@@ -970,7 +973,7 @@ class PasswordArea: Reactor.Component {
             <div .password style="flow:horizontal">
                 {this.renderPop()}
                 <PasswordEyeArea />
-                {false?svg_edit:""}
+                {svg_edit}
             </div>
         </div>;
     }
