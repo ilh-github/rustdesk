@@ -46,14 +46,11 @@ class ConnectStatus: Reactor.Component {
 
     function getConnectStatusStr() {
         if (service_stopped) {
-            // return translate("Service is not running");
-            return "服务未运行";
+            return translate("Service is not running");
         } else if (connect_status == -1) {
-            // return translate('not_ready_status');
-            return "未就绪，请检查网络连接";
+            return translate('not_ready_status');
         } else if (connect_status == 0) {
-            // return translate('connecting_status');
-            return "正在接入 服务网络...";
+            return translate('connecting_status');
         }
         // handler.using_public_server 使用公共服务器
         if (!handler.using_public_server()) return translate('Ready');
@@ -66,7 +63,7 @@ class ConnectStatus: Reactor.Component {
     }
 
     event click $(#setup-server) () {
-        handler.open_url("https://rustdesk.com/blog/id-relay-set/");
+        handler.open_url("https://TTT.com/blog/id-relay-set/");
     }
 }
 
@@ -306,7 +303,7 @@ class MyIdMenu: Reactor.Component {
     function render() {
         return <div #myid>
             {this.renderPop()}
-            ID{svg_menu}
+            ID{false:svg_menu:""}
         </div>;
     }
 
@@ -386,8 +383,8 @@ class MyIdMenu: Reactor.Component {
         msgbox("custom-nocancel-nook-hasclose", translate("About") + " " + name, "<div style='line-height: 2em'> \
             <div>Version: " + handler.get_version() + " \
             <div>Fingerprint: " + handler.get_fingerprint() + " \
-            <div .link .custom-event url='https://rustdesk.com/privacy.html'>" + translate("Privacy Statement") + "</div> \
-            <div .link .custom-event url='https://rustdesk.com'>" + translate("Website") + "</div> \
+            <div .link .custom-event url='https://TTT.com/privacy.html'>" + translate("Privacy Statement") + "</div> \
+            <div .link .custom-event url='https://TTT.com'>" + translate("Website") + "</div> \
 	    <div style='background: #2c8cff; color: white; padding: 1em; margin-top: 1em;'>Copyright &copy; " + new Date().getFullYear() + " Purslane Ltd.\
             <br />" + handler.get_license() + " \
             <p style='font-weight: bold'>" + translate("Slogan_tip") + "</p>\
@@ -581,11 +578,11 @@ class App: Reactor.Component
 
     function render() {
         var is_can_screen_recording = handler.is_can_screen_recording(false);
-        // TTODO如果使用公共服务器，显示404页面
+        // TTODO 如果使用公共服务器，显示404页面
         if(handler.using_public_server()){
             return
             <div .app>
-                <div .left-pane>
+                <div .left-pane style="width:100%;">
                     <div>
                         <div .title>{translate('t_software_abnormality')}</div>
                     </div>
@@ -594,7 +591,8 @@ class App: Reactor.Component
         }
         return
             <div .app>
-                    <div .left-pane>
+                    <div .lighter-text>{translate('desk_tip')}</div>
+                    <div .left-pane >
                     <div>
 
                         <div .title>{translate('Your Desktop')}</div>
@@ -606,13 +604,13 @@ class App: Reactor.Component
                         </div>
                         <PasswordArea />
                     </div>
-                    <ConnectStatus @{this.connect_status} />
                     {is_can_screen_recording ? "": <CanScreenRecording />}
                     {is_can_screen_recording && !handler.is_process_trusted(false) ? <TrustMe /> : ""}
                     {!service_stopped && is_can_screen_recording && handler.is_process_trusted(false) && handler.is_installed() && !handler.is_installed_daemon(false) ? <InstallDaemon /> : ""}
                     {system_error ? <SystemError /> : ""}
                     {!system_error && handler.is_login_wayland() && !handler.current_is_wayland() ? <FixWayland /> : ""}
                     {!system_error && handler.current_is_wayland() ? <ModifyDefaultLogin /> : ""}
+                    <ConnectStatus @{this.connect_status} />
                 </div>
                 <div .right-pane style="display: none">
                     <div .right-content>
@@ -708,10 +706,10 @@ class UpdateMe: Reactor.Component {
     }
 
     event click $(#install-me) {
-        handler.open_url("https://rustdesk.com/download");
+        handler.open_url("https://TTT.com/download");
         return;
         if (!is_win) {
-            handler.open_url("https://rustdesk.com");
+            handler.open_url("https://TTT.com");
             return;
         }
         var url = software_update_url + '.' + handler.get_software_ext();
