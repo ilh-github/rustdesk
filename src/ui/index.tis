@@ -591,10 +591,8 @@ class App: Reactor.Component
         }
         return
             <div .app>
-                    <div .lighter-text>{translate('desk_tip')}</div>
-                    <div .left-pane >
+                    <div .left-pane style="width:100%;">
                     <div>
-
                         <div .title>{translate('Your Desktop')}</div>
                         <div .lighter-text>{translate('desk_tip')}</div>
                         <CustomerNameArea />
