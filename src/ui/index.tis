@@ -303,7 +303,7 @@ class MyIdMenu: Reactor.Component {
     function render() {
         return <div #myid>
             {this.renderPop()}
-            ID{false:svg_menu:""}
+            ID
         </div>;
     }
 
