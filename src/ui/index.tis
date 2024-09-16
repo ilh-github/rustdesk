@@ -303,7 +303,7 @@ class MyIdMenu: Reactor.Component {
     function render() {
         return <div #myid>
             {this.renderPop()}
-            ID
+            ID{false:svg_menu:""}
         </div>;
     }
 
@@ -946,7 +946,7 @@ class CustomerNameArea: Reactor.Component {
         // 昵称
         configOptions["nick-name"] = $(input#remote_nick_name).value;
         handler.set_options(configOptions);
-        this.msg=""+translate('t_save_sucess');
+        this.msg = translate('t_save_success');
         this.update();
         // TTODO 在连接状态检测这里向服务器发送数据
         refreshCurrentApiService();
