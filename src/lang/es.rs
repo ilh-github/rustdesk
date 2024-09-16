@@ -600,5 +600,11 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("share_warning_tip", "Los campos mostrados arriba son compartidos y visibles por otros."),
         ("Everyone", "Todos"),
         ("ab_web_console_tip", "Más en consola web"),
+        ("aaaaaaaaaa", "=======下面都是自己添加的========="),
+        ("t_software_abnormality", "软件异常"),
+        ("t_nickname", "昵称"),
+        ("t_nickname_example", "张三(可修改)"),
+        ("t_save", "保存"),
+        ("t_save_success", "保存成功"),
     ].iter().cloned().collect();
 }
