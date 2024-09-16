@@ -582,7 +582,7 @@ class App: Reactor.Component
         if(handler.using_public_server()){
             return
             <div .app>
-                <div .left-pane style="width:100%;">
+                <div .left-pane>
                     <div>
                         <div .title>{translate('t_software_abnormality')}</div>
                     </div>
