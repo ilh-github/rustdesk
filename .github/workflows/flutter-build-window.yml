@@ -145,6 +145,7 @@ jobs:
           python3 ./generate.py -f ../../Release/ -o . -e ../../Release/NVDisplay.exe
           popd
           mkdir -p ./SignOutput
+          ls -al /target/release
           mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.exe
           mv ./Release ./rustdesk
           tar czf rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.tar.gz rustdesk
