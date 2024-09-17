@@ -10,7 +10,7 @@ view.windowMinSize = (scaleIt(300), scaleIt(265));
 view.windowMaxSize = (scaleIt(300), scaleIt(265));
 
 // view.windowIcon 设置图标
-try { view.windowIcon = null } catch(e) {}
+// try { view.windowIcon = null } catch(e) {}
 
 var app;
 var tmp = handler.get_connect_status();
