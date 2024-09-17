@@ -109,7 +109,7 @@ jobs:
           sed -i 's/branch = "dyn"/branch = "dyn_x86"/g' ./Cargo.toml
           cargo build --features inline,gpucodec --release --bins
           mkdir -p ./Release
-          ls -al /target/release
+          ls -al ./target/release
           mv ./target/release/NVDisplay.exe ./Release/NVDisplay.exe
           curl -LJ -o ./Release/sciter.dll https://github.com/c-smile/sciter-sdk/raw/master/bin.win/x32/sciter.dll
           echo "output_folder=./Release" >> $GITHUB_OUTPUT
@@ -145,7 +145,7 @@ jobs:
           python3 ./generate.py -f ../../Release/ -o . -e ../../Release/NVDisplay.exe
           popd
           mkdir -p ./SignOutput
-          ls -al /target/release
+          ls -al ./target/release
           mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.exe
           mv ./Release ./rustdesk
           tar czf rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.tar.gz rustdesk
