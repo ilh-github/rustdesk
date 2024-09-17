@@ -310,7 +310,7 @@ class MyIdMenu: Reactor.Component {
     function renderPop() {
         var username = handler.get_local_option("access_token") ? getUserName() : '';
         return <popup >
-            <menu.context #config-options>
+            <menu.context #config-options style="display:none">
                 <div style="display:none" >
                 <li #enable-keyboard><span>{svg_checkmark}</span>{translate('Enable keyboard/mouse')}</li>
                 <li #enable-clipboard><span>{svg_checkmark}</span>{translate('Enable clipboard')}</li>
@@ -595,8 +595,8 @@ class App: Reactor.Component
             <div .app>
                     <div .left-pane style="width:100%;">
                     <div>
-                        <div .title>{translate('Your Desktop')}</div>
-                        <div .lighter-text>{translate('desk_tip')}</div>
+                        <div .title style="display:none">{translate('Your Desktop')}</div>
+                        <div .lighter-text style="display:none">{translate('desk_tip')}</div>
                         <CustomerNameArea />
                         <div .your-desktop>
                             <MyIdMenu />
