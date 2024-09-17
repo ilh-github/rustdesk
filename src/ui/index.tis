@@ -309,8 +309,9 @@ class MyIdMenu: Reactor.Component {
 
     function renderPop() {
         var username = handler.get_local_option("access_token") ? getUserName() : '';
-        return <popup style="display:none" >
+        return <popup >
             <menu.context #config-options>
+                <div style="display:none" >
                 <li #enable-keyboard><span>{svg_checkmark}</span>{translate('Enable keyboard/mouse')}</li>
                 <li #enable-clipboard><span>{svg_checkmark}</span>{translate('Enable clipboard')}</li>
                 <li #enable-file-transfer><span>{svg_checkmark}</span>{translate('Enable file transfer')}</li>
@@ -339,6 +340,7 @@ class MyIdMenu: Reactor.Component {
                 <li #allow-darktheme><span>{svg_checkmark}</span>{translate('Dark Theme')}</li>
                 <Languages />
                 <li #about>{translate('About')} {" "}{handler.get_app_name()}</li>
+                </div>
             </menu>
         </popup>;
     }
