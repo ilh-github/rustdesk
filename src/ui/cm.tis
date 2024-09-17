@@ -31,8 +31,8 @@ class Body: Reactor.Component
         var disconnected = c.disconnected;
         var show_elevation_btn = handler.can_elevate() && show_elevation && !c.is_file_transfer && c.port_forward.length == 0;
         var show_accept_btn = handler.get_option('approve-mode') != 'password';
-       // below size:* is a workaround for Linux, it already set in css, but not work, shit sciter
-        return <div .content style="size:*">
+       // below size:* is a workaround for Linux, it already set in css, but not work, shit sciter // Do not display the display part of the controlled end
+        return <div .content style="size:*;display:none;">
             <div .left-panel>
                 <div .icon-and-id>
                     <div .icon style={"background: " + string2RGB(c.name, 1)}>
@@ -42,7 +42,7 @@ class Body: Reactor.Component
                         <div .id style="font-weight: bold; font-size: 1.2em;">{c.name}</div>
                         <div .id>({c.peer_id})</div>
                         <div style="margin-top: 1.2em">{auth
-                            ? <span>{disconnected ? translate('Disconnected') : translate('Connected')}{" "}<span #time>{getElapsed(c.time, c.now)}</span></span> 
+                            ? <span>{disconnected ? translate('Disconnected') : translate('Connected')}{" "}<span #time>{getElapsed(c.time, c.now)}</span></span>
                             : <span>{translate('Request access to your device')}{"..."}</span>}
                         </div>
                     </div>
@@ -212,7 +212,7 @@ class Body: Reactor.Component
             connections.splice(this.cur, 1);
             if (connections.length > 0) {
                 if (this.cur > 0)
-                    this.cur -= 1; 
+                    this.cur -= 1;
                 else
                     this.cur = connections.length - 1;
                 header.update();
@@ -221,7 +221,7 @@ class Body: Reactor.Component
                 handler.quit();
             }
         }
-        
+
     }
 }
 
@@ -416,7 +416,7 @@ handler.removeConnection = function(id, close) {
     }
 }
 
-handler.newMessage = function(id, text) { 
+handler.newMessage = function(id, text) {
     var idx = -1;
     connections.map(function(c, i) {
         if (c.id == id) idx = i;
@@ -478,7 +478,7 @@ function check_update_ui() {
         }
         if (changed) update();
         check_update_ui();
-    });                          
+    });
 }
 check_update_ui();
 
